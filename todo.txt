@@ -1,0 +1,16 @@
+* thread safe session
+
+    session are not thread safe
+    create thread scopped session, show example(flask)
+
+* other things
+
+    * state management(session as a state holder)
+
+    * transaction (using session)
+
+    * also read(ORM querying guide)
+
+    cascading (operation with `relationship()`)
+
+    persistance techniques(practical useful things with session)

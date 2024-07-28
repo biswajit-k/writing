@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, String
-from sqlalchemy.orm import Session, DeclarativeBase, sessionmaker
+from sqlalchemy import create_engine, Column, Integer, String, select
+from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
 
 engine = create_engine("sqlite://", echo=True)
@@ -21,17 +21,11 @@ Base.metadata.create_all(engine)
 session_factory = sessionmaker(bind=engine)
 session = session_factory()
 
-session.autoflush=False		# disable auto flush data
-
-session.begin()		# begin the transaction
 
 john = User(fullname="John Doe")
+session.add(john)
+session.commit()
+session.expire(john)
 print(john.fullname)
 
-session.add(john)   # insert row in the user table
-session.flush()
-
-session.commit()    # persist the object
-
-session.close()		# end the transaction
 

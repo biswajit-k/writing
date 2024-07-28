@@ -1,103 +1,72 @@
 # Session in SQLAlchemy ORM
 
 ## Contents
-* What is a session?
-    
-    way to communicate in ORM
-
-    basic parts of ORM are mapping language classes with database models
-
-    how it fits - engine, connection, transaction then session
-    (show figure also - give credit)
-
-    simple example to show how it is created, used
-
-* How it works?
-    
-    take previous example and show behind the scenes
-
-* All basic operations using session
-
-    CRUD
-
-* properties of session
-
-    commit, explunge, rollback, refresh, object deattach
-    merge
-
-* thread safe session
-
-    session are not thread safe
-    create thread scopped session, show example(flask)
-
-* other things
-
-    * state management(session as a state holder)
-
-    * transaction (using session)
-
-    * also read(ORM querying guide)
-
-    cascading (operation with `relationship()`)
-
-    persistance techniques(practical useful things with session)
+* <a href="#what-is-a-session">What is a session?</a>
+* <a href="#what-is-a-session">CRUD operations using session</a>
+* <a href="#what-is-a-session">Important features in session</a>
 
 
----
 ## What is a session?
 
-Session is an object which is used in performing database operations when we are using ORM for the database.
+Session is an object which is used in database ORM layer to perform database operations.
 
-Many database connection tools like SQLAlchemy provide two ways to interact with the database - Query Builder and the ORM. 
+Many database connection tools like [SQLAlchemy](https://www.sqlalchemy.org/) provide two ways to interact with the database - Query Builder and the ORM. 
 
-I will be using SQLAlchemy for the example, but similar concept is used by any other database toolkit providing these functionality.
+I will be using SQLAlchemy for the examples in this article, but similar concept is used by any other database toolkit providing these functionality.
 
-1.  **Query Builder**: It provides similar API like the SQL, to interact with the database. The basic components are - `Engine`, `Connection`, `MetaData`, `Table`, `Transaction`, `Column` and more. 
+1.  **Query Builder**: 
 
-    The basic idea of using it is like - use the `Engine` to connect with the database, it acts like the connection manager. Then create `Connection` using the engine. When you have the connection, you can begin a `Transaction`, execute it and finally commit/rollback it. Withing a transaction, you can create `Table` which have `Column` of certain types like `Integer`, `String` or execute queries like `Select`.
-        
-    SQLAlchemy has the [**core**](https://docs.sqlalchemy.org/en/20/core/) module which provides this API.
+As the name suggests, it provides functions and objects to build a SQL query.
 
-2. **ORM**: Object Relational Mapping(ORM) follows the object-oriented programming approach. We create classes for the database entities like the table. The properties of that class represent the column in that table. Finally, the methods of the class are used to define the database constraints and defaults. 
+ The basic components in a query builder are - `Engine`, `Connection`, `MetaData`, `Table`, `Transaction`, `Column`.
 
-    For example, below example defines a *user* table in the database with two columns *id* and *name* where *id* is the primary key.
+The basic idea of using it is like - use the *Engine* to connect with the database, it acts like the connection manager. Then create *Connection* using the engine. When you have the connection, you can begin a *Transaction*, execute it and finally commit/rollback it. Withing a transaction, you can create *Table* which have *Column* of certain types like *Integer*, *String* or execute queries like *Select*.
+    
+SQLAlchemy has the [**core**](https://docs.sqlalchemy.org/en/20/core/) module which provides this API.
 
-    ```python
-    class User(Base):
-        __tablename__ = 'users'
-        
-        id = Column(Integer, primary_key=True, autoincrement=True)
-        fullname = Column(String, nullable=False)
+2. **ORM**: 
 
-    with Session(engine) as session:
-        john = User(fullname="John Doe")
-        print(john.fullname)    # accessing the object - John Doe
+*Object Relational Mapping(ORM)* follows the object-oriented programming approach.
 
-        session.add(john)   # insert row in the user table
-        session.commit()    # persist the object  
+ We create classes for the database entities. The objects of these classes, are mapped to the corresponding database entity. For example, the object of a *User* class would represent a row in the table. 
+
+For example, below snippet defines a *user* table in the database with two columns *id* and *fullname* where *id* is the primary key.
+
+```python
+class User(Base):
+    __tablename__ = 'users'
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    fullname = Column(String, nullable=False)
+
+with Session(engine) as session:
+    john = User(fullname="John Doe")
+    print(john.fullname)    # accessing the object - John Doe
+
+    session.add(john)   # insert row in the user table
+    session.commit()    # persist the object  
+
+```
+
+In this way we interact with the objects which are mapped to equivalent SQL code. This not only reduces the complexity and redundancy but also gives us ability to interact with database in an object-oriented approach.
 
 
-    ```
-
-    In this way we interact with the objects which is then converted by the ORM to equivalent SQL code that is executed by the database. This not only reduces the complexity and redundancy but also gives us ability to interact with database in terms of objects.
-
-
-    Notice in the above code that we used **session** to insert record in the database. 
+Notice in the above code that we used **session** to insert record in the database. 
 
 ### What is happening behind the scene?
 
-Look at be complete-code below to understand how things are working:
+Look at the below code to understand.
 
 ```python
-
+start.py
 ```
 Let's quickly breakdown each line:
 
-* `session.begin()` : This initiates a transaction in the database. Behind the scene, the session request the engine to get a database connection. Further requests to database in this session will be made through this connection.
+* `session.begin()` : This initiates a transaction in the database. Behind the scene, the session request the engine to get a database connection. Further requests to database in this transaction will be made through this connection.
 
 * `session.add(john)` : Here, the *john* object to is converted to equivalent SQL row and a insert SQL query is generated that is held by the session object.
 
-* `session.flush()` : Now, the user *john* is **temporarily** inserted into the database. The `flush()` command temporarily writes to the database. This change is not permanant and can be rolledback by calling `session.rollback()`. Note that we have disabled `autoflush`, however, when it is enabled then flush will be automatically called after `session.add()`
+* `session.flush()` : Now, the user *john* is **temporarily** inserted into the database. The `flush()` command temporarily writes to the database. This change is not permanant and can be rolledback by calling `session.rollback()`. Note that we have disabled `autoflush`, however, when it is enabled(*the default*) then flush will be automatically called after *session.add()*.
 
 * `session.commit()` : This command makes the changes permanant into the database. Also, the *john* object will be expired, which means that next call to the object will fetch the object from the database instead of getting it from the identity map.
 
@@ -110,13 +79,15 @@ Below image describes the architecture of SQLAlchemy.
     
 | ![sqlalchemy architecture](./images/sqlalchemy_architecture.png) | 
 |:--:| 
-| *SQLAlchemy Architecture. Credit: [SQLAlchemy: an Architectural Retrospective](https://techspot.zzzeek.org/files/2011/sqla_arch_retro.key.pdf)* |
+| *[SQLAlchemy Architecture](https://techspot.zzzeek.org/files/2011/sqla_arch_retro.key.pdf)* |
 
-As we can see, ORM provides an abstraction over the Core module. The session helps in getting the connection from the connection pool. It allows storing the ORM object, creating a transaction, mapping the ORM object to equivalent SQL query and finally executing.
+As we can see, ORM provides an abstraction over the Core module. The session helps in getting the connection from the connection pool. It allows storing the ORM object, creating a transaction, mapping the ORM object to equivalent SQL query and finally executing it.
 
 ### How does the session store object?
 
-Inside the session, there is a data structure called [identity map](https://docs.sqlalchemy.org/en/20/glossary.html#term-identity-map), which stores the objects that are fetched or created within the session. It is similar to a map where the key is the primary key value of the object and value is the object itself. So, whenever a query is made, the primary key of fetched row is checked if it is present within the identity map, if it does then the existing object is returned.
+Inside the session, there is a data structure called the [identity map](https://docs.sqlalchemy.org/en/20/glossary.html#term-identity-map), which stores the objects that are fetched or created within the session. 
+
+It is similar to a map/dictionary the primary key is mapped to the object. From the query result set, using the primary keys it is checked if the object is already present in the identity map, if it does then it is returned, otherwise new object is created for it. This prevents creation of another copy of existing object. 
 
 An example from the [docs](https://docs.sqlalchemy.org/en/20/orm/session_basics.html#expiring-refreshing):
 
@@ -131,6 +102,7 @@ In above example, *u1* and *u2* are the same object fetched from Identity Map.
 ## CRUD operations using session
 
 1. **Create**
+
 First we create a class object and then we insert it into the database using the `session.add(obj)` command.
 
 ```python
@@ -140,6 +112,7 @@ with Session(engine) as session:
     session.commit()
 ```
 2. **Read**
+
 Reading the object is done by passing the sql statement created from `Select` object to the `session.execute(stmt)` or `session.scalars(stmt)` functions.
 
 `session.execute()` return list of row object, while `session.scalars()` extracts the first value from each row and returns the list of that. This is same as `session.execute().scalars()`.See the below example-
@@ -161,18 +134,106 @@ with Session(engine) as session:
     # Finally => [User(id=1, fullname="John Doe")]
     session.scalars(stmt1)
 
-    stmt2 = select(user.id, user.fullname).where(User.fullname == "John Doe").all()
+    stmt2 = select(user.id, user.fullname).where(User.fullname == "John Doe")
 
     # Output => list[Row objects]
     # Row object => (user.id, user.fullname)
     # Finally => [(1, "John Doe")]
-    session.execute(stmt2)
+    session.execute(stmt2).all()
 
     # Output => list[ScalarResult object]
     # ScalarResult object => Row[0] i.e first value of each row object
     # Finally => [1]
-    session.scalars(stmt2)
+    session.scalars(stmt2).all()
+```
+
+There are multiple options to choose how we want the data after we get the query result. For example all rows, single row, etc. Some of the commonly used options are -
+
+* `.all()` : Returns all the matching rows in a list
+* `.first()` : Returns the first matched row, or `None` if no row is found 
+* `.one()` : Expects that only one row should be in the result and returns that. If there is 0 or more than 1 row then raises Exception.
+* `.scalar()` : Singular form of `scalars`, it returns the first column inside the first row in retult. If result is empty then returns `None`.
 
 3. **Update**
 
+To update the object, we first need a reference to it. So we first fetch it, then we normally change its attributes for updation. After, we commit, the changes get permanant.
+
+```python
+john = session.scalar(select(User).where(User.fullname="John Doe"))
+john.fullname = "Alice"
+
+john in session.dirty   # True
+
+session.commit()
+```
+
 4. **Delete**
+
+Like update, we first need the reference to the object. After we get it, we can simply call `session.delete()` and commit it.
+
+```python
+john = session.scalar(select(User).where(User.fullname="John Doe"))
+session.delete(john)
+
+john in session.deleted     # True
+
+session.commit()
+```
+
+For bulk insertion, updation and deletion, seperate [functions](https://docs.sqlalchemy.org/en/20/orm/queryguide/dml.html#orm-enabled-insert-update-and-delete-statements) are also provided. Using them, we don't need to have object's reference with us before hand.
+## Important features in session
+
+Session object has various features and methods to manipulate existing state of objects. [State management](https://docs.sqlalchemy.org/en/20/orm/session_state_management.html) with session is in itself a vast topic, however, here we will cover some major features.
+
+* **Auto Begin**
+
+The session object internally calls the `session.begin()`(and comes into a transactional state) as soon as
+some work is performed with it. So, the transaction is begun lazily. It can also be check if session has an active transaction currently by-
+
+```python
+session.execute(...)
+session.in_transaction()    # True
+```
+
+To disable this feature and take control of session begin state `session.autobegin = False`
+
+* **Expiring**
+
+The objects go into expired state in cases when the session is committed, rolledback, closed or by explicitly calling `session.expire(obj)`. 
+
+Note that it has no effect on the record(*if present*) in the database corresponding to the object.
+
+Object is expired means that whenever it is accessed next time, its attributes need to be re-fetched from the database.
+
+* **Refreshing**
+
+Refreshing the object does the same thing as expire, but instead of lazily fetching attributes when they are accessed, it fetches them just after expiring the object.
+
+The object is refreshed by calling `session.refresh(obj)`.
+
+* **Rolling Back**
+
+Rolling back *undo* the transaction changes that have been flushed by the session. This is possible as the flush command writes to a temporary file in the database. The changes get permanant into the database only after committing them. So, we have the ability to rollback them before the commit.
+
+It can be done by calling `session.rollback()`. The effects of rolling back are - the connection gets released and the objects get expired. 
+
+* **Expunging**
+
+Expunging means removing the object from the session, so it will no longer be tracked by the session. In this case, the object is said to be in a de-attached state.
+
+Object is expunged by calling `session.expunge(obj)`
+
+* **Merging**
+
+Merging is the opposite of expunging, it attaches the de-attached object with the session.
+
+It is called as `attached_obj = session.merge(obj)`. 
+
+If the object is already attached to another session, a new copy is made which gets attached to current session, while the original object also remains attached to its original session.
+
+Finally, we need to commit the changes to persist the object in database.
+
+## What's next?
+
+In this article, we have covered the basic concept behind session and common features it has. However, there is more to be understood about the session. The other topics includes state management, transaction details, cascading and thread safe session. We are going to cover them in coming articles.
+
