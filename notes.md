@@ -84,3 +84,6 @@ In a distributed database, two-phase commit is used to maintain consistency. Fir
 
 ---
 `session.expunge(obj)` de-attaches object from session. So, it won't be synchronized with database(like flushing to DB, etc). Also, it won't be affected by session operations.
+
+---
+whenever abstracting some modification to database(add/update/delete) within a function 

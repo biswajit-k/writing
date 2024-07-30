@@ -30,7 +30,7 @@ with session_factory() as s:
 
 def f1():
     s1 = session_factory()
-    a_s1 = s1.query(User).filter_by(name=n1).one()
+    a_s1 = s1.query(User).filter_by(name=n1).all()
     print("f1: got the object, now sleeping for 3s....")
     time.sleep(3)
     s1.expire(a_s1)
